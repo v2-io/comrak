@@ -100,6 +100,25 @@ fn inline_code_with_attrs() {
             ])
         ])
     );
+
+    assert_ast_match!(
+        [extension.inline_code_attributes],
+        "- `a`{x=y\n"
+        "  z=w} *b*\n",
+        (document (1:1-2:10) [
+            (list (1:1-2:10) [
+                (item (1:1-2:10) [
+                    (paragraph (1:3-2:10) [
+                        (code (1:3-2:6) {x="y" z="w"} "a")
+                        (text (2:7-2:7) " ")
+                        (emph (2:8-2:10) [
+                            (text (2:9-2:9) "b")
+                        ])
+                    ])
+                ])
+            ])
+        ])
+    );
 }
 
 #[test]
@@ -128,6 +147,20 @@ fn links_and_images_with_attrs() {
                     (text (1:14-1:17) "Jhin")
                 ])
                 (text (1:36-1:36) ".")
+            ])
+        ])
+    );
+
+    assert_ast_match!(
+        [extension.link_attributes],
+        "[Jhin](game){lies=true\n"
+        "four=4}.\n",
+        (document (1:1-2:8) [
+            (paragraph (1:1-2:8) [
+                (link (1:1-2:7) {lies="true" four="4"} "game" [
+                    (text (1:2-1:5) "Jhin")
+                ])
+                (text (2:8-2:8) ".")
             ])
         ])
     );

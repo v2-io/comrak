@@ -2438,17 +2438,17 @@ impl<'a, 'r, 'o, 'd, 'c, 'p> Subject<'a, 'r, 'o, 'd, 'c, 'p> {
 
         let mut ast = node.data_mut();
         let (lines, last_line) = count_newlines(&self.input[self.scanner.pos..][..i]);
+        self.scanner.pos += i;
         if lines == 0 {
             ast.sourcepos.end.column += last_line;
         } else {
-            ast.sourcepos.end.line += lines;
-            // XXX I really freestyled this next line.
-            ast.sourcepos.end.column =
-                parent_line_offsets[ast.sourcepos.end.line - ast.sourcepos.start.line] + last_line;
+            self.line += lines;
+            self.column_offset = last_line as isize - self.scanner.pos as isize;
+            // `parent_line_offsets` is indexed from the block's first line.
+            self.line_offset = parent_line_offsets[self.line - self.block_line];
+            ast.sourcepos.end = (self.line, self.line_offset + last_line).into();
         }
         ast.attrs = Some(Box::new(attrs));
-
-        self.scanner.pos += i;
     }
 }
 
