@@ -696,7 +696,7 @@ fn link_sourcepos_newline_n_between_dest_and_title() {
         "[link](   /uri\n  \"title\"  )\n",
         (document (1:1-2:12) [
             (paragraph (1:1-2:12) [
-                (link (1:1-1:14) "/uri" [
+                (link (1:1-2:12) "/uri" [
                     (text (1:2-1:5) "link")
                 ])
             ])
@@ -711,7 +711,7 @@ fn link_sourcepos_newline_r_between_dest_and_title() {
         "[link](   /uri\r  \"title\"  )\r",
         (document (1:1-2:12) [
             (paragraph (1:1-2:12) [
-                (link (1:1-1:14) "/uri" [
+                (link (1:1-2:12) "/uri" [
                     (text (1:2-1:5) "link")
                 ])
             ])
@@ -726,9 +726,84 @@ fn link_sourcepos_newline_rn_between_dest_and_title() {
         "[link](   /uri\r\n  \"title\"  )\r\n",
         (document (1:1-2:12) [
             (paragraph (1:1-2:12) [
-                (link (1:1-1:14) "/uri" [
+                (link (1:1-2:12) "/uri" [
                     (text (1:2-1:5) "link")
                 ])
+            ])
+        ])
+    );
+}
+
+#[test]
+fn link_sourcepos_newline_before_title_then_inlines() {
+    assert_ast_match!(
+        [],
+        "See [c](/u\n"
+        "\"t\") then [d](/x).\n",
+        (document (1:1-2:18) [
+            (paragraph (1:1-2:18) [
+                (text (1:1-1:4) "See ")
+                (link (1:5-2:4) "/u" [
+                    (text (1:6-1:6) "c")
+                ])
+                (text (2:5-2:10) " then ")
+                (link (2:11-2:17) "/x" [
+                    (text (2:12-2:12) "d")
+                ])
+                (text (2:18-2:18) ".")
+            ])
+        ])
+    );
+}
+
+#[test]
+fn link_sourcepos_newline_before_dest() {
+    assert_ast_match!(
+        [],
+        "[a](\n"
+        "/u) b\n",
+        (document (1:1-2:5) [
+            (paragraph (1:1-2:5) [
+                (link (1:1-2:3) "/u" [
+                    (text (1:2-1:2) "a")
+                ])
+                (text (2:4-2:5) " b")
+            ])
+        ])
+    );
+}
+
+#[test]
+fn link_sourcepos_newline_in_title() {
+    assert_ast_match!(
+        [],
+        "[a](/u \"t\n"
+        "u\") b\n",
+        (document (1:1-2:5) [
+            (paragraph (1:1-2:5) [
+                (link (1:1-2:3) "/u" [
+                    (text (1:2-1:2) "a")
+                ])
+                (text (2:4-2:5) " b")
+            ])
+        ])
+    );
+}
+
+#[test]
+fn link_sourcepos_newline_in_reference_label() {
+    assert_ast_match!(
+        [],
+        "[a][b\n"
+        "c] d\n"
+        "\n"
+        "[b c]: /u\n",
+        (document (1:1-4:9) [
+            (paragraph (1:1-2:4) [
+                (link (1:1-2:2) "/u" [
+                    (text (1:2-1:2) "a")
+                ])
+                (text (2:3-2:4) " d")
             ])
         ])
     );

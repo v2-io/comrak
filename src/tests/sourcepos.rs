@@ -99,6 +99,47 @@ fn reference_definitions_inline_sourcepos() {
     }
 }
 
+#[test]
+fn multiline_link_tail_sourcepos() {
+    for newline in ["\n", "\r\n", "\r"] {
+        for (first, rest) in [("", ""), ("> ", "> "), ("- ", "  "), ("   ", " ")] {
+            // Each splits the part after the link text across two lines;
+            // the second line is `tail` followed by " b".
+            for (head, tail) in [
+                ("[a](/u", "\"t\")"),
+                ("[a](", "/u)"),
+                ("[a](/u \"t", "u\")"),
+                ("![a](/u", "'t')"),
+                ("[a][x", "y]"),
+            ] {
+                let input = format!(
+                    "{first}{head}{newline}{rest}{tail} b{newline}{newline}[x y]: /u{newline}"
+                );
+                let arena = Arena::new();
+                let root = parse_document(&arena, &input, &Options::default());
+                let link = root
+                    .descendants()
+                    .find(|node| {
+                        matches!(node.data().value, NodeValue::Link(_) | NodeValue::Image(_))
+                    })
+                    .unwrap();
+                let col = rest.len() + tail.len();
+                assert_eq!(
+                    link.data().sourcepos,
+                    (1, first.len() + 1, 2, col).into(),
+                    "{input:?}",
+                );
+                let text = link.next_sibling().unwrap();
+                assert_eq!(
+                    text.data().sourcepos,
+                    (2, col + 1, 2, col + 2).into(),
+                    "{input:?}",
+                );
+            }
+        }
+    }
+}
+
 const DOCUMENT: TestCase = (&[sourcepos!((1:1-1:1))], "a");
 
 const FRONT_MATTER: TestCase = (

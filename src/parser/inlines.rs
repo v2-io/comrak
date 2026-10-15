@@ -1836,16 +1836,6 @@ impl<'a, 'r, 'o, 'd, 'c, 'p> Subject<'a, 'r, 'o, 'd, 'c, 'p> {
                 let endall = endtitle + scanners::spacechars(&self.input[endtitle..]).unwrap_or(0);
 
                 if endall < self.input.len() && self.input.as_bytes()[endall] == b')' {
-                    let source_end_pos = if endurl < endall
-                        && self.input.as_bytes()[endurl..endall]
-                            .iter()
-                            .any(|&c| strings::is_line_end_char(c))
-                    {
-                        endurl
-                    } else {
-                        endall + 1
-                    };
-
                     self.scanner.pos = endall + 1;
                     let url = strings::clean_url(url);
                     let title = strings::clean_title(&self.input[starttitle..endtitle]);
@@ -1853,7 +1843,7 @@ impl<'a, 'r, 'o, 'd, 'c, 'p> Subject<'a, 'r, 'o, 'd, 'c, 'p> {
                         is_image,
                         url.into(),
                         title.into(),
-                        source_end_pos,
+                        after_link_text_pos,
                         parent_line_offsets,
                     );
                     return None;
@@ -1909,7 +1899,7 @@ impl<'a, 'r, 'o, 'd, 'c, 'p> Subject<'a, 'r, 'o, 'd, 'c, 'p> {
                 is_image,
                 reff.url,
                 reff.title,
-                self.scanner.pos,
+                after_link_text_pos,
                 parent_line_offsets,
             );
             return None;
@@ -2036,10 +2026,20 @@ impl<'a, 'r, 'o, 'd, 'c, 'p> Subject<'a, 'r, 'o, 'd, 'c, 'p> {
         is_image: bool,
         url: String,
         title: String,
-        source_end_pos: usize,
-        #[cfg_attr(not(feature = "attributes"), allow(unused))] parent_line_offsets: &[usize],
+        after_link_text_pos: usize,
+        parent_line_offsets: &[usize],
     ) {
         let last = self.brackets.pop().unwrap();
+
+        // The destination, title or label following the link text may span
+        // lines; the link ends on the last of them.
+        let (newlines, since_newline) =
+            count_newlines(&self.input[after_link_text_pos..self.scanner.pos]);
+        if newlines > 0 {
+            self.line += newlines;
+            self.column_offset = since_newline as isize - self.scanner.pos as isize;
+            self.line_offset = parent_line_offsets[self.line - self.block_line];
+        }
 
         let nl = NodeLink { url, title };
         let inl = make_inline(
@@ -2054,7 +2054,7 @@ impl<'a, 'r, 'o, 'd, 'c, 'p> Subject<'a, 'r, 'o, 'd, 'c, 'p> {
                 (
                     self.line,
                     usize::try_from(
-                        source_end_pos as isize + self.column_offset + self.line_offset as isize,
+                        self.scanner.pos as isize + self.column_offset + self.line_offset as isize,
                     )
                     .unwrap(),
                 )
