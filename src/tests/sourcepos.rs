@@ -55,6 +55,50 @@ fn multiline_inline_sourcepos() {
     }
 }
 
+#[test]
+fn reference_definitions_inline_sourcepos() {
+    for newline in ["\n", "\r\n", "\r"] {
+        for (first, rest) in [("", ""), ("> ", "> "), ("- ", "  "), ("   ", " ")] {
+            for definitions in [
+                vec!["[a]: /a"],
+                vec!["[a]: /a", "[b]: /b"],
+                vec!["[a]:", "/a", "'title'"],
+            ] {
+                let mut input = String::new();
+                for (i, line) in definitions.iter().enumerate() {
+                    input += if i == 0 { first } else { rest };
+                    input += line;
+                    input += newline;
+                }
+                input += &format!("{rest}Text{newline}{rest}x *[a]* y{newline}");
+
+                let arena = Arena::new();
+                let root = parse_document(&arena, &input, &Options::default());
+                let line = definitions.len() + 1;
+                let col = rest.len() + 1;
+                let text = root
+                    .descendants()
+                    .find(|node| matches!(node.data().value, NodeValue::Text(_)))
+                    .unwrap();
+                assert_eq!(
+                    text.data().sourcepos,
+                    (line, col, line, col + 3).into(),
+                    "{input:?}",
+                );
+                let link = root
+                    .descendants()
+                    .find(|node| matches!(node.data().value, NodeValue::Link(_)))
+                    .unwrap();
+                assert_eq!(
+                    link.data().sourcepos,
+                    (line + 1, col + 3, line + 1, col + 5).into(),
+                    "{input:?}",
+                );
+            }
+        }
+    }
+}
+
 const DOCUMENT: TestCase = (&[sourcepos!((1:1-1:1))], "a");
 
 const FRONT_MATTER: TestCase = (

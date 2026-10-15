@@ -1391,7 +1391,7 @@ where
 
         let has_content = {
             let mut ast = container.data_mut();
-            self.resolve_reference_link_definitions(&mut ast.lines_mut().content)
+            self.resolve_reference_link_definitions(ast.lines_mut())
         };
         if has_content {
             container.data_mut().value = NodeValue::Heading(NodeHeading {
@@ -2101,7 +2101,8 @@ where
         self.finalize_borrowed(node, &mut node.data_mut())
     }
 
-    fn resolve_reference_link_definitions(&mut self, content: &mut String) -> bool {
+    fn resolve_reference_link_definitions(&mut self, lines: &mut BlockLines) -> bool {
+        let content = &mut lines.content;
         let mut pos = 0;
         let mut rrs = vec![];
 
@@ -2120,10 +2121,17 @@ where
         }
 
         if pos != 0 {
+            // Definitions always end at a line end (or the end of the
+            // content), so whole lines are removed.  Drop their offsets too
+            // and record how many there were, so inline source positions
+            // start from the first remaining line.
+            let (removed, _) = strings::count_newlines(&content[..pos]);
             strings::remove_from_start(content, pos);
+            lines.offsets.drain(..removed);
+            lines.removed_lines += removed;
         }
 
-        !strings::is_blank(content)
+        !strings::is_blank(&lines.content)
     }
 
     fn finalize_borrowed(&mut self, node: Node<'a>, ast: &mut Ast) -> Option<Node<'a>> {
@@ -2163,8 +2171,7 @@ where
                 }
             }
             NodeValue::Paragraph => {
-                let has_content =
-                    self.resolve_reference_link_definitions(&mut ast.lines_mut().content);
+                let has_content = self.resolve_reference_link_definitions(ast.lines_mut());
                 if has_content {
                     let content = &mut ast.lines_mut().content;
                     *content = self.take_content(content);
@@ -2317,7 +2324,7 @@ where
     }
 
     fn parse_inlines(&mut self, node: Node<'a>) {
-        let (lines, line) = {
+        let (lines, start_line) = {
             let mut node_data = node.data_mut();
             (
                 node_data.lines.take().unwrap(),
@@ -2327,7 +2334,9 @@ where
         let BlockLines {
             mut content,
             offsets,
+            removed_lines,
         } = *lines;
+        let line = start_line + removed_lines;
         strings::rtrim(&mut content);
 
         let mut subj = inlines::Subject::new(

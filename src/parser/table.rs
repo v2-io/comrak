@@ -308,9 +308,12 @@ fn try_inserting_table_header_paragraph<'a>(
 
     let container_ast = &mut *container.data_mut();
     let start = container_ast.sourcepos.start;
+    // Lines already removed from the start of the container's content (link
+    // reference definitions) belong to the preface paragraph.
+    let removed_lines = mem::take(&mut container_ast.lines_mut().removed_lines);
 
     let mut paragraph = Ast::new(NodeValue::Paragraph, start);
-    paragraph.sourcepos.end.line = start.line + newlines - 1;
+    paragraph.sourcepos.end.line = start.line + removed_lines + newlines - 1;
 
     let container_offsets = &container_ast.lines.as_ref().unwrap().offsets;
     let offsets = smallvec::SmallVec::from_slice(&container_offsets[..newlines]);
@@ -325,12 +328,13 @@ fn try_inserting_table_header_paragraph<'a>(
             .take_while(|&&c| !is_line_end_char(c))
             .count();
 
-    container_ast.sourcepos.start.line += newlines;
+    container_ast.sourcepos.start.line += removed_lines + newlines;
     container_ast.sourcepos.start.column = container_offsets[newlines] + 1;
 
     paragraph.lines = Some(Box::new(BlockLines {
         content: paragraph_content,
         offsets,
+        removed_lines,
     }));
     let node = parser.arena.alloc(paragraph.into());
     container.insert_before(node);

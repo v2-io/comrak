@@ -825,6 +825,10 @@ pub struct Ast {
 pub(crate) struct BlockLines {
     pub(crate) content: String,
     pub(crate) offsets: smallvec::SmallVec<[usize; 4]>,
+    /// Lines removed from the start of `content` (and `offsets`) after the
+    /// block began, i.e. by link reference definitions.  `content` begins
+    /// this many lines after the block's start line.
+    pub(crate) removed_lines: usize,
 }
 
 impl Ast {

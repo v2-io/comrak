@@ -804,6 +804,69 @@ fn link_sourcepos_truffle_bergamot() {
 }
 
 #[test]
+fn reference_definitions_inline_sourcepos() {
+    assert_ast_match!(
+        [],
+        "[r]: /r\n"
+        "[s]: /s\n"
+        "Text [r] and\n"
+        "more [s].\n",
+        (document (1:1-4:9) [
+            (paragraph (1:1-4:9) [
+                (text (3:1-3:5) "Text ")
+                (link (3:6-3:8) "/r" [
+                    (text (3:7-3:7) "r")
+                ])
+                (text (3:9-3:12) " and")
+                (softbreak (3:13-3:13))
+                (text (4:1-4:5) "more ")
+                (link (4:6-4:8) "/s" [
+                    (text (4:7-4:7) "s")
+                ])
+                (text (4:9-4:9) ".")
+            ])
+        ])
+    );
+}
+
+#[test]
+fn reference_definitions_inline_sourcepos_setext_heading() {
+    assert_ast_match!(
+        [],
+        "[r]: /r\n"
+        "Text [r]\n"
+        "===\n",
+        (document (1:1-3:3) [
+            (heading (1:1-3:3) [
+                (text (2:1-2:5) "Text ")
+                (link (2:6-2:8) "/r" [
+                    (text (2:7-2:7) "r")
+                ])
+            ])
+        ])
+    );
+}
+
+#[test]
+fn reference_definitions_inline_sourcepos_failed_setext_heading() {
+    assert_ast_match!(
+        [],
+        "[r]: /r\n"
+        "===\n"
+        "[r]\n",
+        (document (1:1-3:3) [
+            (paragraph (1:1-3:3) [
+                (text (2:1-2:3) "===")
+                (softbreak (2:4-2:4))
+                (link (3:1-3:3) "/r" [
+                    (text (3:2-3:2) "r")
+                ])
+            ])
+        ])
+    );
+}
+
+#[test]
 fn paragraph_sourcepos_multiline() {
     assert_ast_match!(
         [],

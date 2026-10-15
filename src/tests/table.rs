@@ -452,6 +452,29 @@ fn sourcepos_with_preceding_para_line_endings() {
 }
 
 #[test]
+fn sourcepos_with_preceding_para_after_reference_definition() {
+    assert_ast_match!(
+        [extension.table],
+        "[a]: /a\n"
+        "===\n"
+        "| x |\n"
+        "|---|\n",
+        (document (1:1-4:5) [
+            (paragraph (1:1-2:3) [
+                (text (2:1-2:3) "===")
+            ])
+            (table (3:1-4:5) [
+                (table_row (3:1-3:5) [
+                    (table_cell (3:2-3:4) [
+                        (text (3:3-3:3) "x")
+                    ])
+                ])
+            ])
+        ])
+    );
+}
+
+#[test]
 fn table_crlf() {
     assert_ast_match!(
         [extension.table],
